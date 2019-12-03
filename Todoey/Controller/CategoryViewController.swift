@@ -34,9 +34,10 @@ class CategoryViewController: UITableViewController {
       
         let cell = tableView.dequeueReusableCell(withIdentifier: "CategoryCell", for: indexPath)
         
-        let category = categoryArray[indexPath.row]
-        
-        cell.textLabel?.text = category.name
+        cell.textLabel?.text = categoryArray[indexPath.row].name
+//        let category = categoryArray[indexPath.row]
+//
+//        cell.textLabel?.text = category.name
         
        return cell
     }
@@ -49,7 +50,6 @@ class CategoryViewController: UITableViewController {
         
         performSegue(withIdentifier: "goToItems", sender: self)
         
-//        tableView.deselectRow(at: indexPath, animated: true)
     }
     
     //TODO:  - Prepare for Segueway to allow VIEW from CategoryView to jump to ToDoListView
@@ -116,15 +116,15 @@ class CategoryViewController: UITableViewController {
             self.saveCategoryToCoreData()
             
         }
-        
+         alert.addAction(action)
         
         alert.addTextField { (alertTextField) in
-            alertTextField.placeholder = "Create New Category"
             textField = alertTextField
+            
+            textField.placeholder = "Create New Category"
+            
         }
-        
-        alert.addAction(action)
-        
+
         present(alert, animated: true, completion: nil)
         
     }
