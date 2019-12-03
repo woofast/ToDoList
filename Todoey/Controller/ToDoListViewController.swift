@@ -12,9 +12,7 @@ import CoreData
 class ToDoListViewController: UITableViewController {
     
     var itemArray = [Item]()
-    
-    @IBOutlet weak var searchBar: UISearchBar!
-    
+ 
     var selectedCategory : Category? {
         didSet{
             loadItemsFromCoreData()
@@ -61,7 +59,7 @@ class ToDoListViewController: UITableViewController {
         
         itemArray[indexPath.row].done = !itemArray[indexPath.row].done
         
-        saveItemsToPlist()
+        saveItemsToPlist()  //here we need to save items so that the checkmark done property can be saved before sending to context
         
         tableView.deselectRow(at: indexPath, animated: true )
     }

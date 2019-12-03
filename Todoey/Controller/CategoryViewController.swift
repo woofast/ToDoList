@@ -46,7 +46,8 @@ class CategoryViewController: UITableViewController {
     
     //MARK:  - TableView Delegate Methods
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-        saveCategoryToCoreData()
+///        saveCategoryToCoreData()
+        //BIG WARNING!!! DO NOT SAVE DATA HERE BEFORE PERFORM SEGUE. THIS WAY YOU WILL ONLY SAVE "NOTHING" AND SENDING NIL TO ToDoListViewController. Because the context is saved for nil before segue to ToDoListViewController, the search bar nor the items in the category will represent nil. 
         
         performSegue(withIdentifier: "goToItems", sender: self)
         
