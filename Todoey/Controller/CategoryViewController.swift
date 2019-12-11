@@ -7,46 +7,82 @@
 //
 
 import UIKit
-import CoreData
+import RealmSwift
+import ChameleonFramework
 
+class CategoryViewController: SwipeTableViewController {
+    
+    let realm = try! Realm()
+    
+    var categoryArray : Results<Category>?
+    
+    //    let contextThruAppDelegate = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
+    
+    let firstRandomColor = UIColor.flatYellow
+    let secondRandomColor = UIColor.flatMagenta
+    let thirdRandomColor = UIColor.flatNavyBlue
+ 
+    
 
-class CategoryViewController: UITableViewController {
-    
-    var categoryArray = [Category]()
-    
-    let contextThruAppDelegate = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
-    
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        
-        loadCategoryFromCoreData()
+         let gradientColor = GradientColor(.topToBottom, frame: .init(x: 0, y: 44, width: 414, height: 896), colors: [firstRandomColor, secondRandomColor, thirdRandomColor])
+        tableView.backgroundColor = gradientColor
+        tableView.separatorStyle = .none
+        loadCategory()
         
     }
     
-     //MARK:  - TableView DataSource Methods
+    // Can comment this line of code for viewWillAppear so that the color of the last selected Category on the color of Todoey title
+//    override func viewWillAppear(_ animated: Bool) {
+//        guard let navBar = navigationController?.navigationBar else {
+//            fatalError("Navigation Controller Does Not Exist.")
+//              
+//        }
+//        
+//        navBar.backgroundColor = UIColor(hexString: "8368FF")
+//    }
+    
+    //MARK:  - TableView DataSource Methods
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-       
-         return categoryArray.count
+        
+        return categoryArray?.count ?? 1  // Nil Coalescing Operator.   ? means if it is not nil .. then..
     }
+    
     
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-      
-        let cell = tableView.dequeueReusableCell(withIdentifier: "CategoryCell", for: indexPath)
         
-        cell.textLabel?.text = categoryArray[indexPath.row].name
-//        let category = categoryArray[indexPath.row]
+        let cell = super.tableView(tableView, cellForRowAt: indexPath)
+        
+        //          Safer way to write the code without ??
+        if let categoryIndex = categoryArray?[indexPath.row] {
+            cell.textLabel?.text = categoryIndex.name
+           
+//       cell.textLabel?.text = categoryArray?[indexPath.row].name ?? "No Categories Added Yet"
 //
-//        cell.textLabel?.text = category.name
+//        cell.backgroundColor = UIColor(hexString: categoryArray?[indexPath.row].color ?? "8368FF")
+           
+        guard let categoryColor = UIColor(hexString: categoryIndex.color) else {fatalError("Category color does not working")}
         
-       return cell
+//        if let color = UIColor(hexString: (categoryArray?[indexPath.row].color)!) {
+
+            cell.backgroundColor = categoryColor
+            cell.textLabel?.textColor = ContrastColorOf(categoryColor, returnFlat: true)
+          
+
+        }
+        
+//        cell.textLabel?.font = UIFont(name: "MavenPro-Medium", size: 18)
+  
+        return cell
     }
     
     
     
     //MARK:  - TableView Delegate Methods
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-///        saveCategoryToCoreData()
+        ///        saveCategoryToCoreData()
         //BIG WARNING!!! DO NOT SAVE DATA HERE BEFORE PERFORM SEGUE. THIS WAY YOU WILL ONLY SAVE "NOTHING" AND SENDING NIL TO ToDoListViewController. Because the context is saved for nil before segue to ToDoListViewController, the search bar nor the items in the category will represent nil. 
         
         performSegue(withIdentifier: "goToItems", sender: self)
@@ -57,8 +93,8 @@ class CategoryViewController: UITableViewController {
     override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
         let destinationViewController = segue.destination as! ToDoListViewController
         
-       if let indexPath = tableView.indexPathForSelectedRow {
-            destinationViewController.selectedCategory = categoryArray[indexPath.row]
+        if let indexPath = tableView.indexPathForSelectedRow {
+            destinationViewController.selectedCategory = categoryArray?[indexPath.row]
             
         }
         
@@ -66,11 +102,13 @@ class CategoryViewController: UITableViewController {
     
     
     //MARK:  - Data Manipulation Methods
-    func saveCategoryToCoreData() {
+    func save(category: Category) {
         
         do {
             
-            try contextThruAppDelegate.save()
+            try realm.write {
+                realm.add(category)
+            }
             
         } catch {
             
@@ -80,21 +118,33 @@ class CategoryViewController: UITableViewController {
         tableView.reloadData()
     }
     
-    func loadCategoryFromCoreData() {
+    func loadCategory() {
         //here we need to  specify the output<Category> of this type NSFetchRequest
-                let request : NSFetchRequest<Category> = Category.fetchRequest()
         
-        do {
-            categoryArray = try contextThruAppDelegate.fetch(request)
-            
-        } catch {
-            
-            print("Error fetching data from category \(error)")
-            
-        }
+        categoryArray = realm.objects(Category.self)
+        
+        
         tableView.reloadData()
     }
-  
+    
+    //MARK:  - Delete Data From Swipe
+    override func updateModel(at indexPath: IndexPath) {
+
+//        super.updateModel(at: indexPath)
+        
+        if let categoryForDeletion = self.categoryArray?[indexPath.row] {
+            
+            do {
+                    try self.realm.write {
+                    self.realm.delete(categoryForDeletion)
+                    }
+                } catch {
+                    print("Error deleting category, \(error)")
+                    }
+                }
+            
+        }
+        
     
     
     //MARK:  - Add New Categories
@@ -108,16 +158,19 @@ class CategoryViewController: UITableViewController {
         let action = UIAlertAction(title: "Add Category", style: .default) { (action) in
             // What will happen once the user clicks the Add Category button on our UIAlert
             
-            let newCategory = Category(context: self.contextThruAppDelegate)
+            let newCategory = Category()
             
             newCategory.name = textField.text!
-
-            self.categoryArray.append(newCategory)
             
-            self.saveCategoryToCoreData()
+            newCategory.color = UIColor.randomFlat.hexValue()
+            
+            //            self.categoryArray.append(newCategory)  //Realm will auto-update and monitered the changes so we don't need to append new category no more.
+            
+            
+            self.save(category: newCategory)
             
         }
-         alert.addAction(action)
+        alert.addAction(action)
         
         alert.addTextField { (alertTextField) in
             textField = alertTextField
@@ -125,12 +178,10 @@ class CategoryViewController: UITableViewController {
             textField.placeholder = "Create New Category"
             
         }
-
+        
         present(alert, animated: true, completion: nil)
         
     }
-        
     
-  
-    
-}
+}///bottomline of class
+
